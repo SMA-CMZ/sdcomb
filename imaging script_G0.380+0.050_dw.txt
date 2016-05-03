@@ -1,0 +1,140 @@
+______________________________________________________________________________
+###_CONTINUUM_IMAGING###
+______________________________________________________________________________
+
+###__MIRIAD__###
+______________________________________________________________________________
+# Generate uvfits in miriad from MIR data.
+______________________________________________________________________________
+
+# Compact
+
+fits in=G0.380+0.050.lsb.compact.cont op=uvout out=G0.380+0.050.cont.lsb.compact.fits
+
+fits in=G0.380+0.050.usb.compact.cont op=uvout out=G0.380+0.050.cont.usb.compact.fits
+
+# Subcompact
+
+fits in=G0.380+0.050.lsb.if1.subcompact.cont op=uvout out=G0.380+0.050.cont.lsb.if1.subcompact.fits
+
+fits in=G0.380+0.050.usb.if1.subcompact.cont op=uvout out=G0.380+0.050.cont.usb.if1.subcompact.fits
+
+fits in=G0.380+0.050.lsb.if2.subcompact.cont op=uvout out=G0.380+0.050.cont.lsb.if2.subcompact.fits
+
+fits in=G0.380+0.050.usb.if2.subcompact.cont op=uvout out=G0.380+0.050.cont.usb.if2.subcompact.fits
+______________________________________________________________________________
+
+###__CASA__###
+______________________________________________________________________________
+# Import uvfits as CASA measurement sets (MS).
+______________________________________________________________________________
+
+# Compact
+
+importuvfits(fitsfile='G0.380+0.050.cont.lsb.compact.fits',vis='G0.380+0.050.cont.lsb.compact.ms')
+
+importuvfits(fitsfile='G0.380+0.050.cont.usb.compact.fits',vis='G0.380+0.050.cont.usb.compact.ms')
+
+# Subcompact
+
+importuvfits(fitsfile='G0.380+0.050.cont.lsb.if1.subcompact.fits',vis='G0.380+0.050.cont.lsb.if1.subcompact.ms')
+
+importuvfits(fitsfile='G0.380+0.050.cont.usb.if1.subcompact.fits',vis='G0.380+0.050.cont.usb.if1.subcompact.ms')
+
+importuvfits(fitsfile='G0.380+0.050.cont.lsb.if2.subcompact.fits',vis='G0.380+0.050.cont.lsb.if2.subcompact.ms')
+
+importuvfits(fitsfile='G0.380+0.050.cont.usb.if2.subcompact.fits',vis='G0.380+0.050.cont.usb.if2.subcompact.ms')
+
+______________________________________________________________________________
+# Concatenate compact and subcompact visibilities into single MS.
+______________________________________________________________________________
+
+concat(vis=['G0.380+0.050.cont.lsb.compact.ms','G0.380+0.050.cont.usb.compact.ms','G0.380+0.050.cont.lsb.if1.subcompact.ms','G0.380+0.050.cont.usb.if1.subcompact.ms','G0.380+0.050.cont.lsb.if2.subcompact.ms','G0.380+0.050.cont.usb.if2.subcompact.ms'],concatvis='G0.380+0.050.continuum.concat.ms',timesort=True)
+
+plotms(vis='G0.380+0.050.continuum.concat.ms',xaxis='u',yaxis='v') # Plot UV coverage.
+
+______________________________________________________________________________
+# Execute interactive cleaning. (Apply masking as necessary.)
+______________________________________________________________________________
+
+clean(	vis='/Users/danielwalker/G0.380+0.050/CASA/Imported_uvfits/G0.380+0.050.continuum.concat.ms',
+	imagename='G0.380+0.050.continuum.concat.clean',
+	niter=100000,
+	gain=0.1,
+	threshold='3mJy',
+	psfmode='hogbom',
+	imagermode='mosaic',
+	scaletype='SAULT',
+	ftmachine='mosaic',
+	interactive=T,
+	npercycle=30,
+	imsize=400,
+	cell="1arcsec",
+	minpb=0.1,
+	pbcor=False,
+	robust=0.5,
+	weighting='briggs',
+	stokes='I',
+	chaniter=F,
+	phasecenter='J2000 17h46m21 -28d35m30')
+
+______________________________________________________________________________
+# Import BGPS Data as MS, combine via ‘feather’ and export as fits.
+______________________________________________________________________________
+
+importuvfits(fitsfile='BGPS_1.1_CMZ_J2000.fits',vis='BGPS_1.1_CMZ_J2000')
+
+feather(imagename='G0.380+0.050.continuum.feather',highres='G0.380+0.050.continuum.concat.clean.image',lowres='CMZ_ring_1.3mm_J2000_hup')
+
+exportfits(imagename='G0.380+0.050.continuum.feather',fitsimage='G0.380+0.050.continuum.featherv2.fits')
+
+______________________________________________________________________________
+# Re-grid to Galactic co-ordinates and export as fits.
+______________________________________________________________________________
+
+imregrid(imagename='G0.380+0.050.continuum.feather',template='GALACTIC' , output='G0.380+0.050.continuum.featherv2.GAL')
+
+exportfits(imagename='G0.380+0.050.continuum.featherv2.GAL',fitsimage='G0.380+0.050.continuum.featherv2.GAL.fits')
+
+______________________________________________________________________________
+###_SPECTRAL_LINE_IMAGING_###
+______________________________________________________________________________
+
+______________________________________________________________________________
+# C18O Clean [Compact + Sub-compact]
+______________________________________________________________________________
+
+# set up variables
+visi = ['G0.380+0.050.lsb.c18o.ms','G0.380+0.050.lsb.if1.c18o.ms']
+imagenamei='G0.380+0.050.lsb.c18o'
+LineID = 'C18O2-1'
+RestFrequency = '219.56036GHz'      # must be in GHz
+SidebandID = 'lsb'
+SourceID = 'G0.380+0.050'
+SourceLocation = 'GALACTIC 0.380 0.050'
+ImageSize = [300, 300]
+NumberIterations = 1000
+CleaningThreshold = '20mJy'
+VelocityResolution = '1.1km/s'     # must be in km/s
+StartVelocity = '-200km/s'
+NumberChannels = 500
+
+CellSize = '1arcsec'
+
+clean(vis = visi,
+     imagename = imagenamei,
+     restfreq = RestFrequency,
+     imagermode = 'mosaic',
+     mode = 'velocity',
+     outframe='lsrk',
+     width = VelocityResolution,
+     start = StartVelocity,
+     nchan = NumberChannels,
+     interactive = False,
+     imsize = ImageSize,
+     cell = CellSize,
+     phasecenter = "J2000 17h46m21 -28d35m30",
+     weighting = 'natural',
+     niter = NumberIterations,
+     threshold = CleaningThreshold,
+     usescratch = True)
